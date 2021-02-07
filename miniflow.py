@@ -183,6 +183,7 @@ class MSE(Node):
         self.gradients[self.inbound_nodes[1]] = (-2 / self.m) * self.diff
 
 
+
 def topological_sort(feed_dict):
     """
     Sort the nodes in topological order using Kahn's Algorithm.
@@ -261,3 +262,15 @@ def sgd_update(trainables, learning_rate=1e-2):
         # trainable.
         partial = t.gradients[t]
         t.value -= learning_rate * partial
+        
+def predict(graph):
+    """
+    Performs a forward pass through the trained model to arrive at predictions.
+
+    Arguments:
+
+        `graph`: The graph used for training with the last layer removed.
+    """
+    # Forward pass
+    for n in graph:
+        n.forward()

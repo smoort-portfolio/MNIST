@@ -14,6 +14,8 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 from sklearn import preprocessing
 import time
+import pickle
+from sklearn.metrics import accuracy_score
 
 #Read mnist files from current folder .
 
@@ -76,15 +78,18 @@ feed_dict = {
 }
 
 
-epochs = 100
+epochs = 2 # best value = 1000
 # Total number of examples
 m = X_.shape[0]
 #print("m = ", m)
-batch_size = 5
+batch_size = 3 # best value = 5
 steps_per_epoch = m // batch_size
 #print("steps_per_epoch = ", steps_per_epoch)
 graph = topological_sort(feed_dict)
 #print(graph)
+
+filename = 'trained_parameters.dat'
+
 trainables = [W1, b1, W2, b2]
 
 print("Total number of examples = {}".format(m))
@@ -123,11 +128,54 @@ end_time = time.time()
 print("Ending epochs @", end_time)
 print("--- %s seconds ---" % (end_time - start_time))
 
+# save the trained weights & biases to disk
+filename = 'trained_parameters.dat'
+pickle.dump(trainables, open(filename, 'wb'))
+
+# visualize training loss
 loss_drop_list[0] = loss_drop_list[1]
 df = pd.DataFrame(data={"Loss": loss_list, "Loss Drop": loss_drop_list})
 print(loss_list)
 print(loss_drop_list)
 sns.lineplot(data=df)
 plt.show()
+
+"""
+
+Prediction section starts here
+
+"""
+# load the saved weights & biases from disk
+saved_trainables = pickle.load(open(filename, 'rb'))
+print(saved_trainables[0].value.shape)
+W1 = saved_trainables[0]
+b1 = saved_trainables[1]
+W2 = saved_trainables[2]
+b2 = saved_trainables[3]
+
+# Remove the cost function layer (last layer) of the trained model as we will need predictions now
+graph.pop(-1)
+
+# Scale the test inputs to the same level as the training inputs
+X.value = scaler.transform(test_X_)
+
+# Run the preduction by feeding the test input to the trained model
+predict(graph)
+
+# Compare the prediction with the test labels
+"""
+first_image = test_X_[0]
+first_image = np.array(first_image, dtype='float')
+pixels = first_image.reshape((28, 28))
+plt.imshow(pixels, cmap='gray')
+plt.show()
+"""
+print("actual = ", test_y_[:5])
+print("prediction = ", l2.value[:5])
+rounded_prediction = [round(x[0]) for x in l2.value]
+print("rounded_prediction = ", rounded_prediction[:5])
+
+prediction_accuracy = accuracy_score(test_y_, rounded_prediction)
+print("Prediction accuracy = ", "{:.2%}".format(prediction_accuracy))
 
 print("mnist_nn_classifier -- End execution")
