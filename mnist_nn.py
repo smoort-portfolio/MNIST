@@ -16,6 +16,8 @@ from sklearn import preprocessing
 import time
 import pickle
 from sklearn.metrics import accuracy_score
+import datetime
+from sklearn.metrics import confusion_matrix
 
 #Read mnist files from current folder .
 
@@ -45,14 +47,15 @@ test_y_ = np.array(test_labels).astype(float)
 #X_ = (X_ - np.mean(X_, axis=0)) / np.std(X_, axis=0)
 #X_ = preprocessing.scale(X_)
 #X_ = preprocessing.normalize(X_)
-scaler = preprocessing.MinMaxScaler(feature_range=[-1, 1])
+#scaler = preprocessing.MinMaxScaler(feature_range=[-1, 1])
+scaler = preprocessing.MinMaxScaler()
 scaler.fit(X_)
 X_ = scaler.transform(X_)
 #print(X_[1])
 
 
 n_features = X_.shape[1]
-n_hidden = 25
+n_hidden = 50
 W1_ = np.random.randn(n_features, n_hidden)
 b1_ = np.zeros(n_hidden)
 W2_ = np.random.randn(n_hidden, 1)
@@ -78,17 +81,17 @@ feed_dict = {
 }
 
 
-epochs = 2 # best value = 1000
+epochs = 350 # best value = 1000
 # Total number of examples
 m = X_.shape[0]
 #print("m = ", m)
-batch_size = 3 # best value = 5
+batch_size = 5 # best value = 5
 steps_per_epoch = m // batch_size
 #print("steps_per_epoch = ", steps_per_epoch)
 graph = topological_sort(feed_dict)
 #print(graph)
 
-filename = 'trained_parameters.dat'
+parm_filename = "parm_files\\trained_parms" + "_h" + str(n_hidden) + "_e" + str(epochs) + "_b" + str(batch_size) + ".dat"
 
 trainables = [W1, b1, W2, b2]
 
@@ -96,7 +99,7 @@ print("Total number of examples = {}".format(m))
 
 loss_list = []
 loss_drop_list = [0]
-print("Starting epochs @", time.time())
+print("Starting epochs @", datetime.datetime.now())
 start_time = time.time()
 
 # Step 4
@@ -125,20 +128,20 @@ for i in range(epochs):
     loss_list.append(loss/steps_per_epoch)    
 
 end_time = time.time()
-print("Ending epochs @", end_time)
+print("Ending epochs @", datetime.datetime.now())
 print("--- %s seconds ---" % (end_time - start_time))
 
 # save the trained weights & biases to disk
-filename = 'trained_parameters.dat'
-pickle.dump(trainables, open(filename, 'wb'))
+#parm_filename = "parm_files\\trained_parms" + "_h" + str(n_hidden) + "_e" + str(epochs) + "_b" + str(batch_size) + ".dat"
+pickle.dump(trainables, open(parm_filename, 'wb'))
 
 # visualize training loss
 loss_drop_list[0] = loss_drop_list[1]
 df = pd.DataFrame(data={"Loss": loss_list, "Loss Drop": loss_drop_list})
-print(loss_list)
-print(loss_drop_list)
-sns.lineplot(data=df)
-plt.show()
+#print(loss_list)
+#print(loss_drop_list)
+#sns.lineplot(data=df)
+#plt.show()
 
 """
 
@@ -146,8 +149,8 @@ Prediction section starts here
 
 """
 # load the saved weights & biases from disk
-saved_trainables = pickle.load(open(filename, 'rb'))
-print(saved_trainables[0].value.shape)
+saved_trainables = pickle.load(open(parm_filename, 'rb'))
+
 W1 = saved_trainables[0]
 b1 = saved_trainables[1]
 W2 = saved_trainables[2]
@@ -162,7 +165,13 @@ X.value = scaler.transform(test_X_)
 # Run the preduction by feeding the test input to the trained model
 predict(graph)
 
-# Compare the prediction with the test labels
+rounded_predictions = [round(x[0]) for x in l2.value]
+print(rounded_predictions[:5])
+
+prediction_file = "parm_files\\predictions" + "_h" + str(n_hidden) + "_e" + str(epochs) + "_b" + str(batch_size) + ".dat"
+pickle.dump(rounded_predictions, open(prediction_file, 'wb'))
+
+# Calculate accuracy of predicts against test labels
 """
 first_image = test_X_[0]
 first_image = np.array(first_image, dtype='float')
@@ -170,12 +179,35 @@ pixels = first_image.reshape((28, 28))
 plt.imshow(pixels, cmap='gray')
 plt.show()
 """
-print("actual = ", test_y_[:5])
-print("prediction = ", l2.value[:5])
-rounded_prediction = [round(x[0]) for x in l2.value]
-print("rounded_prediction = ", rounded_prediction[:5])
 
-prediction_accuracy = accuracy_score(test_y_, rounded_prediction)
+prediction_accuracy = accuracy_score(test_y_, rounded_predictions)
 print("Prediction accuracy = ", "{:.2%}".format(prediction_accuracy))
+
+# Append accuracy information at the top of file along with training parameters
+accuracy_history = {
+    "Accuracy": "{:.2%}".format(prediction_accuracy),
+    "Execution time": "%s secs" % (end_time - start_time),
+    "hidden_layers": n_hidden,
+    "epochs": epochs,
+    "batch_size": batch_size
+}
+accuracy_filename = "parm_files\\accuracy_history.txt"
+
+with open(accuracy_filename,'r') as f:
+      existing_data = f.read()
+with open(accuracy_filename,'w') as f:
+      f.write(str(datetime.datetime.now()) + " " + str(accuracy_history) + "\n")
+with open(accuracy_filename,'a') as f:
+      f.write(existing_data)
+
+#Get the confusion matrix
+d = {"Actual" : test_y_, "Predicted" : rounded_predictions}
+df = pd.DataFrame(d)
+
+cf_matrix = pd.crosstab(df['Actual'], df['Predicted'], rownames=['Actual'], colnames=['Predicted'], margins=True)
+print(cf_matrix)
+sns.heatmap(cf_matrix/np.sum(cf_matrix), annot=True, fmt='.2%')
+#sns.heatmap(cf_matrix, annot=True)
+plt.show()
 
 print("mnist_nn_classifier -- End execution")
