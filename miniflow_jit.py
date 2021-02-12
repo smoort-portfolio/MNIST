@@ -1,6 +1,10 @@
 import numpy as np
 from numba import jit
 
+@jit(nopython=True)
+def linear_calc(X, W, b):
+    return np.dot(X, W) + b
+
 class Node:
     """
     Base class for nodes in the network.
@@ -88,6 +92,7 @@ class Linear(Node):
         W = self.inbound_nodes[1].value
         b = self.inbound_nodes[2].value
         self.value = np.dot(X, W) + b
+        #self.value = linear_calc(X, W, b)
     
     def backward(self):
         """
