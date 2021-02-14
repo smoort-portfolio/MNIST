@@ -20,6 +20,11 @@ import datetime
 from sklearn.metrics import confusion_matrix
 from numba import jit
 
+n_hidden = 10
+epochs = 20 # best value = 1000
+batch_size = 10 # best value = 5
+learning_rate = 0.01
+
 #Read mnist files from current folder .
 
 mndata = MNIST('./')
@@ -33,17 +38,6 @@ y_ = np.array(train_labels).astype(float)
 test_X_ = np.array(test_images).astype(float)
 test_y_ = np.array(test_labels).astype(float)
 
-#print("X_ type", type(X_))
-#print("X_ shape", X_.shape)
-#print("X_ size", X_.size)
-#print(X_[1])
-
-#print("y_ type", type(y_))
-#print("y_ shape", y_.shape)
-#print("y_ size", y_.size)
-#print(y_[1])
-
-
 # Normalize and zero center data
 #X_ = (X_ - np.mean(X_, axis=0)) / np.std(X_, axis=0)
 #X_ = preprocessing.scale(X_)
@@ -56,13 +50,14 @@ test_y_ = np.array(test_labels).astype(float)
 X_ = (X_ - 128)/255
 test_X_ = (test_X_ - 128)/255
 
-
+#n_labels = len(set(test_X_))
+n_labels = len(np.unique(np.array(a)))
 n_features = X_.shape[1]
-n_hidden = 10
+#n_hidden = 10
 W1_ = np.random.randn(n_features, n_hidden)
 b1_ = np.zeros(n_hidden)
-W2_ = np.random.randn(n_hidden, 1)
-b2_ = np.zeros(1)
+W2_ = np.random.randn(n_hidden, n_labels)
+b2_ = np.zeros(n_labels)
 
 # Neural network
 X, y = Input(), Input()
@@ -99,11 +94,11 @@ feed_dict_pred = {
     b2_pred: b2_
 }
 
-epochs = 250 # best value = 1000
+#epochs = 250 # best value = 1000
 # Total number of examples
 m = X_.shape[0]
 #print("m = ", m)
-batch_size = 10 # best value = 5
+#batch_size = 10 # best value = 5
 steps_per_epoch = m // batch_size
 #print("steps_per_epoch = ", steps_per_epoch)
 graph = topological_sort(feed_dict)
@@ -138,7 +133,7 @@ for i in range(epochs):
 
         # Step 3
         #sgd_update(trainables, learning_rate=1e-1)
-        sgd_update(trainables,0.01)
+        sgd_update(trainables,learning_rate)
 
         loss += graph[-1].value
 
