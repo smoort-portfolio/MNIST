@@ -203,7 +203,7 @@ rounded_predictions = np.array(rounded_predictions)
 prediction_file = "parm_files\\predictions" + "_h" + str(n_hidden) + "_e" + str(epochs) + "_b" + str(batch_size) + ".dat"
 pickle.dump(rounded_predictions, open(prediction_file, 'wb'))
 
-# Calculate accuracy of predicts against test labels
+
 """
 first_image = test_X_[0]
 pixels = first_image.reshape((28, 28))
@@ -211,6 +211,7 @@ plt.imshow(pixels, cmap='gray')
 plt.show()
 """
 
+# Calculate accuracy of predicts against test labels
 prediction_accuracy = accuracy_score(test_y_, rounded_predictions)
 print("Prediction accuracy = ", "{:.2%}".format(prediction_accuracy))
 
