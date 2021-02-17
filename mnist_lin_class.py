@@ -18,7 +18,7 @@ import datetime
 import pickle
 from sm_linear_classifier import *
 
-epochs = 10 # best value = 1000
+epochs = 300 # best value = 1000
 batch_size = 10 # best value = 5
 learning_rate = 1.5
 
@@ -46,9 +46,27 @@ y_ = np.array(train_labels).astype(float)
 test_X_ = np.array(test_images).astype(float)
 test_y_ = np.array(test_labels).astype(float)
 
+"""
+first_image = X_[0]
+pixels = first_image.reshape((28, 28))
+plt.imshow(pixels, cmap='gray')
+label = "Label = " + str(y_[0])
+plt.title(label)
+plt.show()
+"""
+
 # Normalize and zero center training and test input data
 X_ = (X_ - 128)/255
 test_X_ = (test_X_ - 128)/255
+
+# Standardize training and test inputs
+mean_px = X_.mean().astype(np.float32)
+std_px = X_.std().astype(np.float32)
+X_ = (X_ - mean_px)/(std_px)
+test_X_ = (test_X_ - mean_px)/(std_px)
+#sns.displot(X_[0], kind="kde")
+#plt.show()
+
 
 # One hot enode lables
 lb = preprocessing.LabelBinarizer()
@@ -84,17 +102,18 @@ for i in range(epochs):
         X_batch, y_batch = resample(X_, y_, n_samples=batch_size)
 
         # Step 2
+        
         mse,  W, b = forward_and_backward(X_batch, y_batch, W, b, learning_rate)
 
         loss += mse
 
-    #print("Epoch: {}, Loss: {:.3f}".format(i+1, loss/steps_per_epoch))
+    print("Epoch: {}, Loss: {:.3f}".format(i+1, loss/steps_per_epoch))
     epoch_time = time.time()
     #print("Time taken = ", epoch_time - epoch_start_time)
     epoch_start_time = epoch_time
     if i > 0:
         loss_drop_list.append(loss_list[-1] - (loss/steps_per_epoch))
-        if i%20 == 0:
+        if i%5 == 0:
             predictions = predict(test_X_, W, b)
             predictions = np.array(predictions)
             prediction_accuracy = accuracy_score(test_y_, predictions)
@@ -163,8 +182,8 @@ df = pd.DataFrame(d)
 
 cf_matrix = pd.crosstab(df['Actual'], df['Predicted'], rownames=['Actual'], colnames=['Predicted'], margins=True)
 print(cf_matrix)
+cf_matrix = pd.crosstab(df['Actual'], df['Predicted'], rownames=['Actual'], colnames=['Predicted'], margins=True, normalize="index")
 #sns.heatmap(cf_matrix/np.sum(cf_matrix), annot=True, fmt='.2%')
-#sns.heatmap(cf_matrix, annot=True)
 #plt.show()
 
 print("mnist_linear_classifier -- End execution")

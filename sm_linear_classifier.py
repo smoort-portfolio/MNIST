@@ -1,7 +1,5 @@
 import numpy as np
-from numba import jit
 
-@jit
 def forward_and_backward(X, y, W, b, learning_rate):
     """
     Performs a forward pass and a backward pass for the given inputs.
@@ -11,16 +9,26 @@ def forward_and_backward(X, y, W, b, learning_rate):
         `X, y, W, b`: Inputs, Labels, Weights and biases
         'learning_rate': Hyper parameter that controls rate of learning
     """
+
+    """
+    print("X =", X)
+    print("y =", y)
+    print("W =", W)
+    print("b =", b)
+    """
     
     linear_value = np.dot(X, W) + b
-    
+
     sigmoid_value = 1. / (1. + np.exp(-linear_value))
+    
+    
     
     error = y - sigmoid_value
     
     mse = np.mean(error**2)
     
     gradient_sigmoid = (-2 / len(y)) * error
+    
     
     gradient_linear = sigmoid_value * (1 - sigmoid_value) * gradient_sigmoid
     
@@ -32,10 +40,6 @@ def forward_and_backward(X, y, W, b, learning_rate):
     b -= learning_rate * gradient_b
 
     """
-    print("X =", X)
-    print("y =", y)
-    print("W =", W)
-    print("b =", b)
     print("linear value =", linear_value)
     print("sigmoid_value =", sigmoid_value)
     print("error =", error)
@@ -46,7 +50,7 @@ def forward_and_backward(X, y, W, b, learning_rate):
     print("gradient_linear =", gradient_linear)
     print("gradient_W =", gradient_W)
     print("gradient_b =", gradient_b)
-
+    
     print("X shape =", X.shape)
     print("y shape =", y.shape)
     print("W shape =", W.shape)
