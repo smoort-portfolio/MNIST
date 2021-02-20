@@ -18,9 +18,9 @@ import datetime
 import pickle
 from sm_linear_classifier import *
 
-epochs = 300 # best value = 1000
-batch_size = 10 # best value = 5
-learning_rate = 1.5
+epochs = 100 # best value = 300
+batch_size = 5 # best value = 5
+learning_rate = 1.5 # best value = 1.5
 
 #Read mnist files from current folder .
 
@@ -29,6 +29,8 @@ mndata.gz = True
 
 train_images, train_labels = mndata.load_training()
 test_images, test_labels = mndata.load_testing()
+#train_images = pickle.load(open("parm_files\\new_X_.mnist", 'rb'))
+#train_labels = pickle.load(open("parm_files\\new_y_.mnist", 'rb'))
 
 """
 train_images_filename = "parm_files\\mnist_train_images.mnist"
@@ -40,6 +42,7 @@ train_labels = pickle.load(open(train_labels_filename, 'rb'))
 test_images = pickle.load(open(test_images_filename, 'rb'))
 test_labels = pickle.load(open(test_labels_filename, 'rb'))
 """
+
 
 X_ = np.array(train_images).astype(float)
 y_ = np.array(train_labels).astype(float)
@@ -71,12 +74,18 @@ test_X_ = (test_X_ - mean_px)/(std_px)
 # One hot enode lables
 lb = preprocessing.LabelBinarizer()
 lb.fit([0,1, 2, 3, 4, 5, 6, 7, 8, 9])
-y_ = lb.transform(y_)
+binary_y_ = lb.transform(y_)
 
 n_labels = 10
 n_features = X_.shape[1]
 W = np.random.randn(n_features, n_labels)
 b = np.zeros(n_labels)
+
+# load the saved weights & biases from disk
+saved_trainables = pickle.load(open("parm_files\\ln_trained_parms_e30_b5_bkup.dat", 'rb'))
+W = saved_trainables[0]
+b = saved_trainables[1]
+
 trainables = [W, b]
 
 # Total number of examples
@@ -99,7 +108,7 @@ for i in range(epochs):
     for j in range(steps_per_epoch):
         # Step 1
         # Randomly sample a batch of examples
-        X_batch, y_batch = resample(X_, y_, n_samples=batch_size)
+        X_batch, y_batch = resample(X_, binary_y_, n_samples=batch_size)
 
         # Step 2
         
@@ -114,10 +123,14 @@ for i in range(epochs):
     if i > 0:
         loss_drop_list.append(loss_list[-1] - (loss/steps_per_epoch))
         if i%5 == 0:
+            predictions = predict(X_, W, b)
+            predictions = np.array(predictions)
+            prediction_accuracy = accuracy_score(y_, predictions)
+            print("Trainin set prediction accuracy = ", "{:.2%}".format(prediction_accuracy))
             predictions = predict(test_X_, W, b)
             predictions = np.array(predictions)
             prediction_accuracy = accuracy_score(test_y_, predictions)
-            print("Prediction accuracy = ", "{:.2%}".format(prediction_accuracy))
+            print("Test set prediction accuracy = ", "{:.2%}".format(prediction_accuracy))
     loss_list.append(loss/steps_per_epoch)
 
 end_time = time.time()
@@ -175,6 +188,16 @@ with open(accuracy_filename,'w') as f:
       f.write(str(datetime.datetime.now()) + " " + str(accuracy_history) + "\n")
 with open(accuracy_filename,'a') as f:
       f.write(existing_data)
+
+incorrect_predictions = []
+
+for idx, label in enumerate(test_y_):
+    if label != predictions[idx]:
+        incorrect_predictions.append([idx, label, predictions[idx]])
+
+# save the incorrect predictions to disk
+incorrect_predictions_filename = "parm_files\\incorrect_predictions.dat"
+pickle.dump(incorrect_predictions, open(incorrect_predictions_filename, 'wb'))
 
 #Get the confusion matrix
 d = {"Actual" : test_y_, "Predicted" : predictions}
