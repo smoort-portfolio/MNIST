@@ -81,10 +81,12 @@ n_features = X_.shape[1]
 W = np.random.randn(n_features, n_labels)
 b = np.zeros(n_labels)
 
+"""
 # load the saved weights & biases from disk
 saved_trainables = pickle.load(open("parm_files\\ln_trained_parms_e30_b5_bkup.dat", 'rb'))
 W = saved_trainables[0]
 b = saved_trainables[1]
+"""
 
 trainables = [W, b]
 
