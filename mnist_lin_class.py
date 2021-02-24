@@ -17,10 +17,20 @@ import time
 import datetime
 import pickle
 from sm_linear_classifier import *
+import neptune
 
+model_type = 'linear classifier'
+activation_function = 'sigmoid'
 epochs = 100 # best value = 300
 batch_size = 5 # best value = 5
 learning_rate = 1.5 # best value = 1.5
+
+# Set Neptune Project to track experiment
+neptune.init(project_qualified_name='smoort/MNIST')
+
+# Create experiment
+PARAMS = {'mdl': model_type, 'act': activation_function, 'lr': learning_rate, 'epochs': epochs, 'batch_size': batch_size}
+neptune.create_experiment(name='mnist_linear_classifier', params=PARAMS)
 
 #Read mnist files from current folder .
 
@@ -58,18 +68,28 @@ plt.title(label)
 plt.show()
 """
 
-# Normalize and zero center training and test input data
-X_ = (X_ - 128)/255
-test_X_ = (test_X_ - 128)/255
 
+# Normalize and zero center training and test input data
+x_mean = 128
+x_max = 255
+#X_ = (X_ - 128)/255
+#test_X_ = (test_X_ - 128)/255
+#X_ = (X_ - x_mean)/x_max
+#test_X_ = (test_X_ - x_mean)/x_max
+X_ = X_/x_max
+test_X_ = test_X_/x_max
+
+"""
 # Standardize training and test inputs
 mean_px = X_.mean().astype(np.float32)
 std_px = X_.std().astype(np.float32)
 X_ = (X_ - mean_px)/(std_px)
 test_X_ = (test_X_ - mean_px)/(std_px)
+print("max =" + str(np.max(X_)))
+print("min =" + str(np.min(X_)))
 #sns.displot(X_[0], kind="kde")
 #plt.show()
-
+"""
 
 # One hot enode lables
 lb = preprocessing.LabelBinarizer()
@@ -104,6 +124,7 @@ loss_drop_list = [0]
 print("Starting epochs @", datetime.datetime.now())
 start_time = epoch_start_time = time.time()
 
+y_selected = []
 # Step 4
 for i in range(epochs):
     loss = 0
@@ -111,7 +132,7 @@ for i in range(epochs):
         # Step 1
         # Randomly sample a batch of examples
         X_batch, y_batch = resample(X_, binary_y_, n_samples=batch_size)
-
+        y_selected.append(lb.inverse_transform(y_batch))
         # Step 2
         
         mse,  W, b = forward_and_backward(X_batch, y_batch, W, b, learning_rate)
@@ -119,6 +140,7 @@ for i in range(epochs):
         loss += mse
 
     print("Epoch: {}, Loss: {:.3f}".format(i+1, loss/steps_per_epoch))
+    neptune.log_metric('loss', loss/steps_per_epoch)    
     epoch_time = time.time()
     #print("Time taken = ", epoch_time - epoch_start_time)
     epoch_start_time = epoch_time
@@ -138,6 +160,12 @@ for i in range(epochs):
 end_time = time.time()
 print("Ending epochs @", datetime.datetime.now())
 print("--- %s seconds ---" % (end_time - start_time))
+neptune.log_metric('training_time', (end_time - start_time))
+
+print("y_selected length = " + str(len(y_selected)))
+y_selected = np.array(y_selected)
+unique, counts = np.unique(y_selected, return_counts=True)
+print (np.asarray((unique, counts)).T)
 
 parm_filename = "parm_files\\ln_trained_parms" + "_e" + str(epochs) + "_b" + str(batch_size) + ".dat"
 # save the trained weights & biases to disk
@@ -169,6 +197,7 @@ predictions = np.array(predictions)
 #print("Prediction =", predictions)
 prediction_accuracy = accuracy_score(test_y_, predictions)
 print("Prediction accuracy = ", "{:.2%}".format(prediction_accuracy))
+neptune.log_metric('acc', prediction_accuracy)
 
 prediction_file = "parm_files\\predictions" + "_e" + str(epochs) + "_b" + str(batch_size) + ".dat"
 pickle.dump(predictions, open(prediction_file, 'wb'))

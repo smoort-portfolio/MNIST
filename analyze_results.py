@@ -24,9 +24,8 @@ for x in incorrect_predictions:
     predictions.append(x[2])
     
 
-cf_matrix = confusion_matrix(test_y_, predictions)
-print(cf_matrix)
-
+#cf_matrix = confusion_matrix(test_y_, predictions)
+#print(cf_matrix)
 
 #Get the confusion matrix
 d = {"Actual" : test_y_, "Predicted" : predictions}
